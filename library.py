@@ -32,6 +32,9 @@ class TreeNode:
     def is_root(self):
         return not isinstance(self.__parent, TreeNode)
     
+    def is_leaf(self):
+        return self.get_left() is None and self.get_right() is None
+    
     def get_height(self):
         left_height = 0
         if self.get_left() is not None:
@@ -55,6 +58,7 @@ class TreeNode:
         right_child = self.get_right()
         if self.is_root():
             parent.root = right_child
+            right_child.is_right = False
         else:
             if not self.is_right:
                 parent.set_left(right_child)
@@ -69,8 +73,8 @@ class TreeNode:
         self.is_right = False
 
     def rotate_to_right(self):
-        parent = self.__parent # None
-        left_child = self.get_left() #15
+        parent = self.__parent
+        left_child = self.get_left()
         if self.is_root():
             parent.root = left_child
         else:
@@ -119,9 +123,32 @@ class TreeNode:
             else:
                 self.get_right().insert(data)
         self.run_balance()
+    
+    def remove(self):
+        if self.get_left() is not None and self.get_right() is not None:
+            substitute = self.get_right()
+            while True:
+                if substitute.get_left() is None:
+                    break
+                substitute = substitute.get_left()
+            substitute.remove()
+            substitute.set_left(self.get_left())
+            substitute.set_right(self.get_right())
+        elif not self.is_leaf():
+            substitute = self.get_left() or self.get_right()
+        else:
+            substitute = None
+        
+        if self.is_root():
+            parent.root = substitute
+        if not self.is_right:
+            parent.set_left(substitute)
+        else:
+            parent.set_right(substitute)
+        substitute.set_parent(parent)        
 
-    def print(self, indent=1):
-        data = str(indent-1) + "-" * indent * 4 + str(self.data) + f" {self.get_depth()}\n"
+    def print(self, indent=0):
+        data = str(indent) + "-" * indent * 4 + str(self.data) + f" {self.get_depth()}\n"
         if self.get_left() is not None:
             data += '/' + self.get_left().print(indent+1)
         if self.get_right() is not None:
@@ -150,12 +177,45 @@ class BinaryTree:
     def length(self):
         return self.size
     
+    def height(self):
+        if self.root is None:
+            return 0
+        return self.root.get_height()
+    
     def insert(self, value):
         if self.root is None:
             self.root = TreeNode(value, parent=self)
         else:
             self.root.insert(value)
         self.size += 1
+    
+    def search(self, value, node=0):
+        if self.root is None or node is None:
+            return None
+        if node == 0:
+            node = self.root
+        
+        if node.get_data() == value:
+            return node
+        elif value < node.get_data():
+            return self.search(value, node.get_left())
+        elif value > node.get_data():
+            return self.search(value, node.get_right())   
+    
+    def search_by_year(self, value):
+        if self.root is None:
+            return None
+        result = []
+        for node in self.root:
+            if node.get_data().get_year() == value:
+                result.append(node.get_data())
+        return result
+    
+    def remove_item(self, value):
+        node = self.search(value)
+        if node is None:
+            return node
+        node.remove()
     
     def __str__(self):
         return str(self.root)
@@ -174,16 +234,22 @@ class Book:
         return self._year
 
     def __eq__(self, other_book):
-        return self.get_title() == other_book.get_title()
+        if isinstance(other_book, Book):
+            return self.get_title() == other_book.get_title()
+        return self.get_title() == other_book
 
     def __lt__(self, other_book):
-        return min(self.get_title(), other_book.get_title()) == self.get_title()
+        if isinstance(other_book, Book):
+            return min(self.get_title(), other_book.get_title()) == self.get_title()
+        return min(self.get_title(), other_book) == self.get_title()
 
     def __ne__(self, other_book):
         return not (self == other_book)
 
     def __gt__(self, other_book):
-        return max(self.get_title(), other_book.get_title()) == self.get_title()
+        if isinstance(other_book, Book):
+            return max(self.get_title(), other_book.get_title()) == self.get_title()
+        return max(self.get_title(), other_book) == self.get_title()
     
     def __str__(self):
-        return self.get_title()
+        return f"{self.get_title()} |{self.get_year()}|"
